@@ -1,6 +1,6 @@
 {
   "name": "qedis",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "distributed queue runner based on redis",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -20,7 +20,8 @@
     "queue",
     "typescript",
     "ts",
-    "q"
+    "q",
+	"redis-queue"
   ],
   "author": "Qiaosen Huang",
   "license": "MIT",
