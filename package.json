@@ -17,7 +17,10 @@
   },
   "keywords": [
     "redis",
-    "queue"
+    "queue",
+    "typescript",
+    "ts",
+    "q"
   ],
   "author": "Qiaosen Huang",
   "license": "MIT",

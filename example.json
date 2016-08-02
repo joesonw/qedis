@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"module": "commonjs",
+		"outDir": "example-dist",
+		"target": "ES6",
+		"experimentalDecorators": true,
+        "moduleResolution": "node",
+		"emitDecoratorMetadata": true,
+        "sourceMap": true
+	},
+	"compileOnSave": false,
+    "files": [
+        "Example.ts"
+    ]
+}

@@ -17,7 +17,7 @@ declare class Queue {
     private fetchQueue();
     private run();
     fetch(): Promise<Task>;
-    acknowledge(task: Task): Promise<void>;
+    acknowledge(task: Task, deleteOriginal?: boolean): Promise<void>;
     start(): void;
     stop(): void;
     setMaxInterval(interval: number): void;
