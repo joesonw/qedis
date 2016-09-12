@@ -7,13 +7,19 @@
   "dependencies": {
     "@types/q": "0.0.27",
     "@types/redis": "^0.12.27",
+    "ava": "^0.16.0",
     "interval.ts": "0.0.4",
+    "nyc": "^8.1.0",
     "q": "^1.4.1",
-    "redis": "^2.6.2"
+    "redis": "^2.6.2",
+    "source-map-support": "^0.4.2"
   },
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run test-typescript && npm run ava",
+    "build": "tsc -p tsconfig.json",
+    "test-typescript": "rm -rf test-dist && tsc -p tsconfig.test.json",
+    "ava": "ava test-dist/test/*.js"
   },
   "keywords": [
     "redis",
@@ -21,7 +27,7 @@
     "typescript",
     "ts",
     "q",
-	"redis-queue"
+    "redis-queue"
   ],
   "author": "Qiaosen Huang",
   "license": "MIT",
