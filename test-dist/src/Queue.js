@@ -33,17 +33,24 @@ class Queue {
             for (const key in task) {
                 item.push(key, task[key]);
             }
-            return new Promise((resolve, reject) => {
-                this.redis
-                    .multi()
-                    .lpush(`queue:${queue}`, task.id)
-                    .hmset(`item:${queue}:${task.id}`, item)
-                    .exec(err => {
-                    if (err)
-                        return reject(err);
-                    resolve();
-                });
-            });
+            while (1) {
+                try {
+                    return new Promise((resolve, reject) => {
+                        this.redis
+                            .multi()
+                            .lpush(`queue:${queue}`, task.id)
+                            .hmset(`item:${queue}:${task.id}`, item)
+                            .exec(err => {
+                            if (err)
+                                return reject(err);
+                            resolve();
+                        });
+                    });
+                }
+                catch (e) {
+                    continue;
+                }
+            }
         });
     }
     fetchPending() {

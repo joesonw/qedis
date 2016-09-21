@@ -4,6 +4,7 @@ interface Task {
     id: string;
     createdAt?: number;
     updatedAt?: number;
+    intermediate?: boolean;
 }
 export { Primitive };
 export default Task;
