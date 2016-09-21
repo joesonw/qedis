@@ -156,19 +156,26 @@ class Queue {
 
     public async acknowledge(task: Task, deleteOriginal: boolean = false): Promise<void> {
         const queue = this.queue;
-        return new Promise< void >((resolve, reject) => {
-            let exec = this.redis
-                .multi()
-                .lrem(`pending:${queue}`, 0, task.id);
-            if (deleteOriginal) {
-                exec = exec
-                        .del(`item:${queue}:${task.id}`);
-            }
-            exec.exec(err => {
-                    if (err) return reject(err);
-                    resolve();
+        let i = 0;
+        while (i < 10) {
+            try {
+                return new Promise< void >((resolve, reject) => {
+                    let exec = this.redis
+                        .multi()
+                        .lrem(`pending:${queue}`, 0, task.id);
+                    if (deleteOriginal) {
+                        exec = exec
+                                .del(`item:${queue}:${task.id}`);
+                    }
+                    exec.exec(err => {
+                            if (err) return reject(err);
+                            resolve();
+                        });
                 });
-        })
+            } catch (e) {
+                i++;
+            }
+        }
     }
 
     start() {

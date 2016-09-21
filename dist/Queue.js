@@ -166,20 +166,28 @@ class Queue {
     acknowledge(task, deleteOriginal = false) {
         return __awaiter(this, void 0, void 0, function* () {
             const queue = this.queue;
-            return new Promise((resolve, reject) => {
-                let exec = this.redis
-                    .multi()
-                    .lrem(`pending:${queue}`, 0, task.id);
-                if (deleteOriginal) {
-                    exec = exec
-                        .del(`item:${queue}:${task.id}`);
+            let i = 0;
+            while (i < 10) {
+                try {
+                    return new Promise((resolve, reject) => {
+                        let exec = this.redis
+                            .multi()
+                            .lrem(`pending:${queue}`, 0, task.id);
+                        if (deleteOriginal) {
+                            exec = exec
+                                .del(`item:${queue}:${task.id}`);
+                        }
+                        exec.exec(err => {
+                            if (err)
+                                return reject(err);
+                            resolve();
+                        });
+                    });
                 }
-                exec.exec(err => {
-                    if (err)
-                        return reject(err);
-                    resolve();
-                });
-            });
+                catch (e) {
+                    i++;
+                }
+            }
         });
     }
     start() {
