@@ -1,6 +1,6 @@
 {
   "name": "qedis",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "distributed queue runner based on redis",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -16,6 +16,7 @@
   },
   "devDependencies": {},
   "scripts": {
+    "prepublish": "npm run build",
     "test": "npm run test-typescript && npm run ava",
     "build": "tsc -p tsconfig.json",
     "test-typescript": "rm -rf test-dist && tsc -p tsconfig.test.json",
