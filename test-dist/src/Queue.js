@@ -29,11 +29,11 @@ class Queue {
         return __awaiter(this, void 0, void 0, function* () {
             const queue = this.queue;
             const item = [];
-            task.createdAt = Date.now();
-            task.updatedAt = Date.now();
+            task.updatedAt = task.updatedAt || new Date();
+            task.createdAt = task.createdAt || new Date();
             item.push('id', task.id);
-            item.push('updatedAt', task.updatedAt);
-            item.push('createdAt', task.createdAt);
+            item.push('updatedAt', task.updatedAt.getTime().toString());
+            item.push('createdAt', task.createdAt.getTime().toString());
             const fields = task.fields;
             for (const key in fields) {
                 item.push(key, fields[key]);
@@ -70,10 +70,10 @@ class Queue {
                 task.id = rawFields[key];
             }
             else if (key === 'createdAt') {
-                task.createdAt = parseInt(rawFields[key], 10);
+                task.createdAt = new Date(parseInt(rawFields[key], 10));
             }
             else if (key === 'updatedAt') {
-                task.updatedAt = parseInt(rawFields[key], 10);
+                task.updatedAt = new Date(parseInt(rawFields[key], 10));
             }
             else {
                 fields[key] = rawFields[key];

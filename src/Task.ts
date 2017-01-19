@@ -1,8 +1,8 @@
 
 abstract class Task {
     abstract id: string;
-    abstract createdAt: number;
-    abstract updatedAt: number;
+    abstract createdAt: Date;
+    abstract updatedAt: Date;
     abstract fields: {[key: string] : string };
 }
 

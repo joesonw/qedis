@@ -12,10 +12,6 @@ const Redis = require("redis");
 const ava_1 = require("ava");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 class TestTask {
-    constructor() {
-        this.createdAt = Date.now();
-        this.updatedAt = Date.now();
-    }
     get fields() {
         return {
             data: this.data.toString(),

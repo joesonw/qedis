@@ -9,8 +9,8 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 class TestTask implements Task {
     id: string;
-    createdAt: number = Date.now();
-    updatedAt: number = Date.now();
+    createdAt: Date;
+    updatedAt: Date;
     data: number;
     get fields(): {[key: string] : string } {
         return {
