@@ -1,6 +1,6 @@
 import * as Redis from 'redis';
 import Task from './Task';
-declare class Queue {
+declare class Queue<T extends Task> {
     private redis;
     private queue;
     private interval;
@@ -9,14 +9,16 @@ declare class Queue {
     private step;
     private retryTimeout;
     private runner;
+    private TConstructor;
     private taskQueue;
     private listeners;
-    constructor(redis: Redis.RedisClient, queue: string);
-    add(task: Task): Promise<void>;
+    constructor(redis: Redis.RedisClient, queue: string, t_constructor: new () => T);
+    add(task: T): Promise<void>;
+    private parseTask(result);
     private fetchPending();
     private fetchQueue();
     private run();
-    fetch(): Promise<Task>;
+    fetch(): Promise<T>;
     acknowledge(task: Task, deleteOriginal?: boolean): Promise<void>;
     start(): void;
     stop(): void;
