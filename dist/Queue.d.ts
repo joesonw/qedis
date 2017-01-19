@@ -8,11 +8,15 @@ declare class Queue<T extends Task> {
     private initialInterval;
     private step;
     private retryTimeout;
+    private operationRetryTimeout;
+    private maxOperationRetry;
     private runner;
     private TConstructor;
     private taskQueue;
     private listeners;
+    private _onError;
     constructor(redis: Redis.RedisClient, queue: string, t_constructor: new () => T);
+    onError: Function;
     add(task: T): Promise<void>;
     private parseTask(result);
     private fetchPending();
@@ -27,5 +31,7 @@ declare class Queue<T extends Task> {
     setStep(interval: number): void;
     setRetryTimeout(timeout: number): void;
     setInterval(interval: number): void;
+    setOperationRetryTimeout(operationRetryTimeout: number): void;
+    setMaxOperationRetry(maxOperationRetry: number): void;
 }
 export default Queue;

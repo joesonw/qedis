@@ -9,6 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 const Q = require("q");
 const interval_ts_1 = require("interval.ts");
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 class Queue {
     constructor(redis, queue, t_constructor) {
         this.interval = 0; //current interval till next pull (ms)
@@ -16,6 +17,8 @@ class Queue {
         this.initialInterval = 1; // initial interval after data received (ms)
         this.step = 100;
         this.retryTimeout = 10000;
+        this.operationRetryTimeout = 1000;
+        this.maxOperationRetry = 5;
         this.taskQueue = [];
         this.listeners = [];
         this.queue = queue;
@@ -23,7 +26,13 @@ class Queue {
         this.runner = new interval_ts_1.default(() => this.run(), this.interval);
         this.TConstructor = t_constructor;
         this.runner.on('error', err => {
+            if (this._onError) {
+                this._onError(err);
+            }
         });
+    }
+    set onError(onError) {
+        this._onError = onError;
     }
     add(task) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -38,9 +47,10 @@ class Queue {
             for (const key in fields) {
                 item.push(key, fields[key]);
             }
-            while (1) {
+            let count = 0;
+            while (count < this.maxOperationRetry) {
                 try {
-                    return new Promise((resolve, reject) => {
+                    return yield new Promise((resolve, reject) => {
                         this.redis
                             .multi()
                             .lpush(`queue:${queue}`, task.id)
@@ -53,6 +63,8 @@ class Queue {
                     });
                 }
                 catch (e) {
+                    count++;
+                    yield sleep(this.operationRetryTimeout);
                     continue;
                 }
             }
@@ -187,10 +199,10 @@ class Queue {
     acknowledge(task, deleteOriginal = false) {
         return __awaiter(this, void 0, void 0, function* () {
             const queue = this.queue;
-            let i = 0;
-            while (i < 10) {
+            let counter = 0;
+            while (counter < this.maxOperationRetry) {
                 try {
-                    return new Promise((resolve, reject) => {
+                    return yield new Promise((resolve, reject) => {
                         let exec = this.redis
                             .multi()
                             .lrem(`pending:${queue}`, 0, task.id);
@@ -206,7 +218,9 @@ class Queue {
                     });
                 }
                 catch (e) {
-                    i++;
+                    counter++;
+                    yield sleep(this.operationRetryTimeout);
+                    continue;
                 }
             }
         });
@@ -232,6 +246,12 @@ class Queue {
     setInterval(interval) {
         this.interval = interval;
         this.runner.adjust(interval);
+    }
+    setOperationRetryTimeout(operationRetryTimeout) {
+        this.operationRetryTimeout = operationRetryTimeout;
+    }
+    setMaxOperationRetry(maxOperationRetry) {
+        this.maxOperationRetry = maxOperationRetry;
     }
 }
 Object.defineProperty(exports, "__esModule", { value: true });
