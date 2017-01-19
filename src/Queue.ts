@@ -3,6 +3,8 @@ import * as Q from 'q';
 import Interval from 'interval.ts';
 import Task from './Task';
 
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
 class Queue<T extends Task> {
     private redis: Redis.RedisClient;
     private queue: string;
@@ -12,6 +14,8 @@ class Queue<T extends Task> {
     private initialInterval: number = 1; // initial interval after data received (ms)
     private step: number = 100;
     private retryTimeout: number = 10000
+    private operationRetryTimeout: number = 1000;
+    private maxOperationRetry: number = 5;
 
     private runner: Interval;
     private TConstructor: new () => T;
@@ -19,13 +23,22 @@ class Queue<T extends Task> {
     private taskQueue: Array<T> = [];
     private listeners: Array<Q.Deferred<T>> = [];
 
+    private _onError: Function;
+
     constructor(redis: Redis.RedisClient, queue: string, t_constructor: new () =>T) {
         this.queue = queue;
         this.redis = redis;
         this.runner = new Interval(() => this.run(), this.interval);
         this.TConstructor = t_constructor
         this.runner.on('error', err => {
+            if (this._onError) {
+                this._onError(err);
+            }
         });
+    }
+
+    public set onError(onError: Function) {
+        this._onError = onError;
     }
 
     public async add(task: T): Promise<void> {
@@ -40,9 +53,10 @@ class Queue<T extends Task> {
         for (const key in fields) {
             item.push(key, fields[key]);
         }
-        while (1) {
+        let count = 0;
+        while (count < this.maxOperationRetry) {
             try {
-                return new Promise<void>((resolve, reject) => {
+                return await new Promise<void>((resolve, reject) => {
                     this.redis
                         .multi()
                         .lpush(`queue:${queue}`, task.id)
@@ -53,6 +67,8 @@ class Queue<T extends Task> {
                         });
                 });
             } catch (e) {
+                count++;
+                await sleep(this.operationRetryTimeout);
                 continue;
             }
         }
@@ -178,10 +194,10 @@ class Queue<T extends Task> {
 
     public async acknowledge(task: Task, deleteOriginal: boolean = false): Promise<void> {
         const queue = this.queue;
-        let i = 0;
-        while (i < 10) {
+        let counter = 0;
+        while (counter < this.maxOperationRetry) {
             try {
-                return new Promise<void>((resolve, reject) => {
+                return await new Promise<void>((resolve, reject) => {
                     let exec = this.redis
                         .multi()
                         .lrem(`pending:${queue}`, 0, task.id);
@@ -195,7 +211,9 @@ class Queue<T extends Task> {
                         });
                 });
             } catch (e) {
-                i++;
+                counter++;
+                await sleep(this.operationRetryTimeout);
+                continue;
             }
         }
     }
@@ -227,6 +245,14 @@ class Queue<T extends Task> {
     setInterval(interval: number) {
         this.interval = interval;
         this.runner.adjust(interval);
+    }
+
+    setOperationRetryTimeout(operationRetryTimeout: number) {
+        this.operationRetryTimeout = operationRetryTimeout;
+    }
+
+    setMaxOperationRetry(maxOperationRetry: number) {
+        this.maxOperationRetry = maxOperationRetry;
     }
 }
 
