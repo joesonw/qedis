@@ -2,15 +2,15 @@
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator.throw(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
         function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments)).next());
     });
 };
-const Q = require('q');
-const interval_ts_1 = require('interval.ts');
+const Q = require("q");
+const interval_ts_1 = require("interval.ts");
 class Queue {
-    constructor(redis, queue) {
+    constructor(redis, queue, t_constructor) {
         this.interval = 0; //current interval till next pull (ms)
         this.maxInterval = 1000; //max interval (ms)
         this.initialInterval = 1; // initial interval after data received (ms)
@@ -21,6 +21,7 @@ class Queue {
         this.queue = queue;
         this.redis = redis;
         this.runner = new interval_ts_1.default(() => this.run(), this.interval);
+        this.TConstructor = t_constructor;
         this.runner.on('error', err => {
         });
     }
@@ -30,8 +31,12 @@ class Queue {
             const item = [];
             task.createdAt = Date.now();
             task.updatedAt = Date.now();
-            for (const key in task) {
-                item.push(key, task[key]);
+            item.push('id', task.id);
+            item.push('updatedAt', task.updatedAt);
+            item.push('createdAt', task.createdAt);
+            const fields = task.fields;
+            for (const key in fields) {
+                item.push(key, fields[key]);
             }
             while (1) {
                 try {
@@ -52,6 +57,30 @@ class Queue {
                 }
             }
         });
+    }
+    parseTask(result) {
+        const rawFields = {};
+        for (let i = 0; i < result.length; i += 2) {
+            rawFields[result[i]] = result[i + 1];
+        }
+        const task = new this.TConstructor();
+        const fields = {};
+        for (const key in rawFields) {
+            if (key === 'id') {
+                task.id = rawFields[key];
+            }
+            else if (key === 'createdAt') {
+                task.createdAt = parseInt(rawFields[key], 10);
+            }
+            else if (key === 'updatedAt') {
+                task.updatedAt = parseInt(rawFields[key], 10);
+            }
+            else {
+                fields[key] = rawFields[key];
+            }
+        }
+        task.fields = fields;
+        return task;
     }
     fetchPending() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -88,11 +117,7 @@ class Queue {
                         return reject(err);
                     if (!res)
                         return resolve(null);
-                    let result = {};
-                    for (let i = 0; i < res.length; i += 2) {
-                        result[res[i]] = res[i + 1];
-                    }
-                    resolve(result);
+                    resolve(this.parseTask(res));
                 });
             });
         });
@@ -119,11 +144,7 @@ class Queue {
                         return reject(err);
                     if (!res)
                         return resolve(null);
-                    let result = {};
-                    for (let i = 0; i < res.length; i += 2) {
-                        result[res[i]] = res[i + 1];
-                    }
-                    resolve(result);
+                    resolve(this.parseTask(res));
                 });
             });
         });

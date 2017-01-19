@@ -1,13 +1,9 @@
 
-type Primitive = number | string | boolean ;
-
-interface Task {
-    [key: string] : Primitive;
-    id: string;
-    createdAt?: number;
-    updatedAt?: number;
-    intermediate?: boolean;
+abstract class Task {
+    abstract id: string;
+    abstract createdAt: number;
+    abstract updatedAt: number;
+    abstract fields: {[key: string] : string };
 }
 
-export {Primitive};
 export default Task;

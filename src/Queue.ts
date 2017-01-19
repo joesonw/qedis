@@ -1,9 +1,9 @@
 import * as Redis from 'redis';
 import * as Q from 'q';
 import Interval from 'interval.ts';
-import Task, {Primitive} from './Task';
+import Task from './Task';
 
-class Queue {
+class Queue<T extends Task> {
     private redis: Redis.RedisClient;
     private queue: string;
 
@@ -14,25 +14,31 @@ class Queue {
     private retryTimeout: number = 10000
 
     private runner: Interval;
+    private TConstructor: new () => T;
 
-    private taskQueue: Array<Task> = [];
-    private listeners: Array<Q.Deferred<Task>> = [];
+    private taskQueue: Array<T> = [];
+    private listeners: Array<Q.Deferred<T>> = [];
 
-    constructor(redis: Redis.RedisClient, queue: string) {
+    constructor(redis: Redis.RedisClient, queue: string, t_constructor: new () =>T) {
         this.queue = queue;
         this.redis = redis;
         this.runner = new Interval(() => this.run(), this.interval);
+        this.TConstructor = t_constructor
         this.runner.on('error', err => {
         });
     }
 
-    public async add(task: Task): Promise<void> {
+    public async add(task: T): Promise<void> {
         const queue = this.queue;
-        const item: Array<Primitive> = [];
+        const item: Array<number | string | boolean> = [];
         task.createdAt = Date.now();
         task.updatedAt = Date.now();
-        for (const key in task) {
-            item.push(key, task[key]);
+        item.push('id', task.id);
+        item.push('updatedAt', task.updatedAt);
+        item.push('createdAt', task.createdAt);
+        const fields = task.fields;
+        for (const key in fields) {
+            item.push(key, fields[key]);
         }
         while (1) {
             try {
@@ -52,9 +58,33 @@ class Queue {
         }
     }
 
-    private async fetchPending(): Promise<Task> {
+    private parseTask(result): T {
+        const rawFields: {[key: string] : string } = {};
+        for (let i = 0; i < result.length; i += 2) {
+            rawFields[result[i]] = result[i + 1];
+        }
+
+        const task = new this.TConstructor()
+        const fields = {};
+
+        for (const key in rawFields) {
+            if (key === 'id') {
+                task.id = rawFields[key] as string;
+            } else if (key === 'createdAt') {
+                task.createdAt= parseInt(rawFields[key], 10);
+            } else if (key === 'updatedAt') {
+                task.updatedAt = parseInt(rawFields[key], 10);
+            } else {
+                fields[key] = rawFields[key];
+            }
+        }
+        task.fields = fields;
+        return task;
+    }
+
+    private async fetchPending(): Promise<T> {
         const queue = this.queue;
-        return new Promise<Task>((resolve, reject) => {
+        return new Promise<T>((resolve, reject) => {
             const now = Date.now();
             this.redis.eval(`
                     local ids = redis.call(
@@ -84,18 +114,14 @@ class Queue {
                 `, 0, (err, res) => {
                     if (err) return reject(err);
                     if (!res) return resolve(null);
-                    let result: Task = {} as Task;
-                    for (let i = 0; i < res.length; i += 2) {
-                        result[res[i]] = res[i + 1];
-                    }
-                    resolve(result);
+                    resolve(this.parseTask(res));
                 });
         });
     }
 
-    private async fetchQueue(): Promise<Task> {
+    private async fetchQueue(): Promise<T> {
         const queue = this.queue;
-        return new Promise<Task>((resolve, reject) => {
+        return new Promise<T>((resolve, reject) => {
             const now = Date.now();
             this.redis.eval(`
                     local id = redis.call("rpop", "queue:${queue}");
@@ -112,11 +138,7 @@ class Queue {
                 `, 0, (err, res) => {
                     if (err) return reject(err);
                     if (!res) return resolve(null);
-                    let result: Task = {} as Task;
-                    for (let i = 0; i < res.length; i += 2) {
-                        result[res[i]] = res[i + 1];
-                    }
-                    resolve(result);
+                    resolve(this.parseTask(res));
                 })
         })
     }
@@ -143,12 +165,12 @@ class Queue {
         this.runner.adjust(this.interval);
     }
 
-    async fetch(): Promise<Task> {
+    async fetch(): Promise<T> {
         const task = this.taskQueue.pop();
         if (task) {
             return Promise.resolve(task);
         } else {
-            const d = Q.defer<Task>();
+            const d = Q.defer<T>();
             this.listeners.push(d);
             return d.promise;
         }
@@ -159,7 +181,7 @@ class Queue {
         let i = 0;
         while (i < 10) {
             try {
-                return new Promise< void >((resolve, reject) => {
+                return new Promise<void>((resolve, reject) => {
                     let exec = this.redis
                         .multi()
                         .lrem(`pending:${queue}`, 0, task.id);

@@ -1,6 +1,6 @@
 {
   "name": "qedis",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "distributed queue runner based on redis",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
