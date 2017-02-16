@@ -12,7 +12,8 @@
     "nyc": "^8.1.0",
     "q": "^1.4.1",
     "redis": "^2.6.2",
-    "source-map-support": "^0.4.2"
+    "source-map-support": "^0.4.2",
+    "typescript": "^2.1.6"
   },
   "devDependencies": {},
   "scripts": {
